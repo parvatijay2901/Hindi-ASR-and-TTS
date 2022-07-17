@@ -1,93 +1,77 @@
-from pathlib import Path
-
+from espnet2.bin.tts_inference import Text2Speech
+from espnet2.utils.types import str_or_none
+import time
+import torch
+import soundfile
+import glob
+import os
 import numpy as np
-import pytest
-import scipy.io.wavfile
+import kaldiio
+import subprocess
+from convert_text_to_phn_exp import *
+from scipy.io import wavfile
+from pesq import pesq
 
-from pesq import pesq, pesq_batch, NoUtterancesError, PesqError
+tag_exp = "/home/iiit/bhargavi/Hindi_TTS/espnet/egs2/BJP_MajorProject/tts1_try/exp/tts_train_raw_phn_none/train.loss.ave_5best.pth"
 
+train_config= "/home/iiit/bhargavi/Hindi_TTS/espnet/egs2/BJP_MajorProject/tts1_try/exp/tts_train_raw_phn_none/config.yaml"
 
-def test():
-    ref_path = 'speech.wav'
-    deg_path = 'speech_bab_0dB.wav'
+vocoder_tag = "/home/iiit/bhargavi/ParallelWaveGAN/egs/hindi_iitm_female/voc1/exp/train_nodev_hin_f_iitm/checkpoint-400000steps.pkl"
 
-    sample_rate, ref = scipy.io.wavfile.read(ref_path)
-    sample_rate, deg = scipy.io.wavfile.read(deg_path)
+vocoder_config="/home/iiit/bhargavi/ParallelWaveGAN/egs/hindi_iitm_female/voc1/exp/train_nodev_hin_f_iitm/config.yml"
 
-    score = pesq(ref=ref, deg=deg, fs=sample_rate, mode='wb')
+text2speech = Text2Speech.from_pretrained(
+    train_config=train_config,
+    model_file=tag_exp,
+    vocoder_file=vocoder_tag,
+    vocoder_config=vocoder_config,
+    device="cpu",
+    threshold=0.5,
+    minlenratio=0.0,
+    maxlenratio=10.0,
+    use_att_constraint=True,
+    backward_window=1,
+    forward_window=3,
+    speed_control_alpha=1.0,
+    noise_scale=0.333,
+    noise_scale_dur=0.333,
+    always_fix_seed=False
+    )
 
-    assert score == 1.0832337141036987, score
+filenames=glob.glob('./text/*.txt')
+list_pesq_scores_wb = []
+list_pesq_scores_nb = []
 
-    score = pesq(ref=ref, deg=deg, fs=sample_rate, mode='nb')
+for filename in filenames:
+    try:
+        text_file = open(filename, 'r')
+        text = text_file.read()
+        print(filename.split('/')[-1],'--',text)
+        input_text = get_lex(text)
+        start = time.time()
+        wav = text2speech(input_text)["wav"]
+        rtf = (time.time() - start)
+        #print(f"RTF = {rtf:5f
+        
+        filename_generated = "./generated_wav/"
+        +filename.split('/')[-1][:-3] + "wav"
+        soundfile.write(filename_generated, wav.numpy(),
+        text2speech.fs, "PCM_16")
+        
+        filename_wav = "./wav/" + filename.split('/')[-1][:-3] + "wav"
+        rate, ref = wavfile.read(filename_wav)
+        rate, deg = wavfile.read(filename_generated)
+        
+        pesq_wb = pesq(rate, ref, deg, 'wb')
+        list_pesq_scores_wb.append(pesq_wb)
+        print(pesq_wb)
+        pesq_nb = pesq(rate, ref, deg, 'nb')
+        list_pesq_scores_nb.append(pesq_nb)
+        print(pesq_nb)
+        
+    except:
+        print('File not found ', filename.split('/')[-1])
+        pass
 
-    assert score == 1.6072081327438354, score
-    return score
-
-
-def test_no_utterances_nb_mode():
-    sample_rate = 16000
-    silent_ref = np.zeros(sample_rate)
-    deg = np.random.randn(sample_rate)
-
-    with pytest.raises(NoUtterancesError) as e:
-        pesq(ref=silent_ref, deg=deg, fs=sample_rate, mode='nb')
-
-    score = pesq(ref=silent_ref, deg=deg, fs=sample_rate, mode='nb',
-                 on_error=PesqError.RETURN_VALUES)
-
-    assert score == PesqError.NO_UTTERANCES_DETECTED, score
-    return score
-
-
-def test_no_utterances_wb_mode():
-    sample_rate = 16000
-    silent_ref = np.zeros(sample_rate)
-    deg = np.random.randn(sample_rate)
-
-    with pytest.raises(NoUtterancesError) as e:
-        pesq(ref=silent_ref, deg=deg, fs=sample_rate, mode='wb')
-
-    score = pesq(ref=silent_ref, deg=deg, fs=sample_rate, mode='wb',
-                 on_error=PesqError.RETURN_VALUES)
-
-    assert score == PesqError.NO_UTTERANCES_DETECTED, score
-    return score
-
-
-def test_pesq_batch():
-    ref_path = 'speech.wav'
-    deg_path = 'speech_bab_0dB.wav'
-
-    sample_rate, ref = scipy.io.wavfile.read(ref_path)
-    sample_rate, deg = scipy.io.wavfile.read(deg_path)
-
-    n_file = 10
-    ideally = np.array([1.0832337141036987 for i in range(n_file)])
-
-    # 1D - 1D
-    score = pesq_batch(ref=ref, deg=deg, fs=sample_rate, mode='wb')
-    assert score == [1.0832337141036987], score
-
-    # 1D - 2D
-    deg_2d = np.repeat(deg[np.newaxis, :], n_file, axis=0)
-    scores = pesq_batch(ref=ref, deg=deg_2d, fs=sample_rate, mode='wb')
-    assert np.allclose(np.array(scores), ideally), scores
-
-    # 2D - 2D
-    ref_2d = np.repeat(ref[np.newaxis, :], n_file, axis=0)
-    scores = pesq_batch(ref=ref_2d, deg=deg_2d, fs=sample_rate, mode='wb')
-    assert np.allclose(np.array(scores), ideally), scores
-
-    # narrowband
-    score = pesq_batch(ref=ref, deg=deg, fs=sample_rate, mode='nb')
-    assert score == [1.6072081327438354], score
-
-    # 1D - 2D multiprocessing
-    deg_2d = np.repeat(deg[np.newaxis, :], n_file, axis=0)
-    scores = pesq_batch(ref=ref, deg=deg_2d, fs=sample_rate, mode='wb', n_processor=4)
-    assert np.allclose(np.array(scores), ideally), scores
-
-    # 2D - 2D multiprocessing
-    ref_2d = np.repeat(ref[np.newaxis, :], n_file, axis=0)
-    scores = pesq_batch(ref=ref_2d, deg=deg_2d, fs=sample_rate, mode='wb', n_processor=4)
-    assert np.allclose(np.array(scores), ideally), scores
+print("Mean PESQ score (wb):",sum(list_pesq_scores_wb)/len(list_pesq_scores_wb))
+print("Mean PESQ score (nb):",sum(list_pesq_scores_nb)/len(list_pesq_scores_nb))
