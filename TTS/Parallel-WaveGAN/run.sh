@@ -17,14 +17,7 @@ n_jobs=20       # number of parallel jobs in feature extraction
 conf=conf/parallel_wavegan.v1.yaml
 
 # directory path setting
-db_root=/home/iiit/Hindi_tts/espnet/egs2/BJP_MajorProject/tts1_try/downloads/Hindi_TTS_dataset/audio_wav # direcotry including wavfiles (MODIFY BY YOURSELF)
-                          # each wav filename in the directory should be unique
-                          # e.g.
-                          # /path/to/database
-                          # ├── utt_1.wav
-                          # ├── utt_2.wav
-                          # │   ...
-                          # └── utt_N.wav
+db_root=/home/iiit/Hindi_tts/espnet/egs2/BJP_MajorProject/tts1_try/downloads/Hindi_TTS_dataset/audio_wav
 dumpdir=dump # directory to dump features
 
 # subset setting
@@ -65,20 +58,7 @@ if [ "${stage}" -le 0 ] && [ "${stop_stage}" -ge 0 ]; then
         --eval_set "${eval_set}" \
         --shuffle "${shuffle}" \
         "${db_root}" data
-        
-     #for dset in ${train_set} ${dev_set} ${eval_set}; do
-   # echo "Trimming audio for ${dset}"
-    #bash trim_silence.sh \
-    #    --cmd "${train_cmd}" \
-     #   --nj 32 \
-      #  --fs 16000 \
-       # --win_length 2048 \
-        #--shift_length 512 \
-        #--threshold 35 \
-        #"data/${dset}" "data/${dset}/log"
-    #utils/fix_data_dir.sh "data/${dset}"
     
-#done
 fi
 
 stats_ext=$(grep -q "hdf5" <(yq ".format" "${conf}") && echo "h5" || echo "npy")
