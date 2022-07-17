@@ -2,17 +2,11 @@ dir=$PWD
 parentdir="$(dirname "$dir")"
 parentdir="$(dirname "$parentdir")"
 
-### Values to change -start ###
 inference_data_name="hindi"
 wav_path="/home/iiit/Major_project_BJP/ASR/data_inference/data_input"
 prep_scripts="../../utils/prep_scripts"
 destination_path=$parentdir'/data/inference/'${inference_data_name}
-### Values to change end ###
 
-
-
-
-#### Please avoid changing anything below this line ####
 
 finetuning_dict=$parentdir'/data/finetuning/dict.ltr.txt'
 txt_path=${wav_path}
@@ -39,6 +33,3 @@ cp ${finetuning_dict} ${destination_path}
 
 echo "Starting dictionary analysis of finetuning dictionary "${destination_path}/dict.ltr.txt" for any punctuation marks"
 python ${analysis_scripts}/generate_dict_analysis.py --dict ${destination_path}/dict.ltr.txt
-
-
-
