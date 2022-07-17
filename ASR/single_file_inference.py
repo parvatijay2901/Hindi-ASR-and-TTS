@@ -365,18 +365,6 @@ def parse_transcription(model_path, dict_path, wav_path, cuda, decoder="viterbi"
     return result
 
 if __name__ == "__main__":
-#    parser = argparse.ArgumentParser(description='Run')
-#    parser.add_argument('-m', '--model', type=str, help="Custom model path")
-#    parser.add_argument('-d', '--dict', type=str, help="Dict path")
-#    parser.add_argument('-w', '--wav', type=str, help= "Wav file path")
-#    parser.add_argument('-c', '--cuda', default=False, type=bool, help="CUDA True or False")
-#    parser.add_argument('-D', '--decoder', type=str, help= "Which decoder to use kenlm or viterbi")
-#    parser.add_argument('-l', '--lexicon', default=None, type=str, help= "Lexicon path if decoder is kenlm")
-#    parser.add_argument('-L', '--lm-path', default=None, type=str, help= "Language mode path if decoder is kenlm")
-#    parser.add_argument('-H', '--half', default=False, type=bool, help="Half True or False")
-#    
-#    args_local = parser.parse_args()
-    
     model='/home/iiit/Major_project_BJP/ASR/vakyansh_build_pretrained_model/checkpoints/custom_model/final_model.pt'
     dictonary='/home/iiit/Major_project_BJP/ASR/vakyansh_build_pretrained_model/data/finetuning/dict.ltr.txt'
     decoder='kenlm'
